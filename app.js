@@ -2019,25 +2019,27 @@
   });
 
   // =========================================================================
-  // 9B. FLAPPY CANDLESTICK MINIGAME ($250 PER POINT)
+  // 9B. TERMINAL ARCADE MINIGAMES (FLAPPY, SNAKE, CANDLE DODGER)
   // =========================================================================
+  function creditMinigameReward(reward) {
+    state.cash += reward;
+    if (state.gameOver && state.cash > 0) {
+      state.gameOver = false;
+      state.gameOverDismissed = false;
+      const goModal = document.getElementById('gameOverModal');
+      if (goModal) {
+        goModal.classList.add('hidden');
+        goModal.classList.remove('flex');
+      }
+    }
+    updateHeaderStats();
+    renderOrderTicket();
+    saveProgress();
+  }
+
   if (window.KnutFlappy) {
     const flappyGame = window.KnutFlappy.init({
-      onPoint(reward) {
-        state.cash += reward;
-        if (state.gameOver && state.cash > 0) {
-          state.gameOver = false;
-          state.gameOverDismissed = false;
-          const goModal = document.getElementById('gameOverModal');
-          if (goModal) {
-            goModal.classList.add('hidden');
-            goModal.classList.remove('flex');
-          }
-        }
-        updateHeaderStats();
-        renderOrderTicket();
-        saveProgress();
-      },
+      onPoint: creditMinigameReward,
       onRoundEnd(points, earned) {
         addLog(`FLAPPY MINIGAME: +${formatPrice(earned)} (${points} PT${points === 1 ? '' : 'S'})`, 'buy');
         notifyStatus(`FLAPPY PAYOUT: +${formatPrice(earned)} (${points} PTS)`);
@@ -2062,6 +2064,32 @@
         });
       }
     }
+  }
+
+  if (window.KnutSnake) {
+    const snakeGame = window.KnutSnake.init({
+      onPoint: creditMinigameReward,
+      onRoundEnd(points, earned) {
+        addLog(`SNAKE MINIGAME: +${formatPrice(earned)} (${points} PT${points === 1 ? '' : 'S'})`, 'buy');
+        notifyStatus(`SNAKE PAYOUT: +${formatPrice(earned)} (${points} PTS)`);
+        saveProgress();
+      }
+    });
+    const openSnakeBtn = document.getElementById('openSnakeBtn');
+    if (snakeGame && openSnakeBtn) openSnakeBtn.addEventListener('click', snakeGame.open);
+  }
+
+  if (window.KnutDodger) {
+    const dodgerGame = window.KnutDodger.init({
+      onPoint: creditMinigameReward,
+      onRoundEnd(points, earned) {
+        addLog(`DODGER MINIGAME: +${formatPrice(earned)} (${points} PT${points === 1 ? '' : 'S'})`, 'buy');
+        notifyStatus(`DODGER PAYOUT: +${formatPrice(earned)} (${points} PTS)`);
+        saveProgress();
+      }
+    });
+    const openDodgerBtn = document.getElementById('openDodgerBtn');
+    if (dodgerGame && openDodgerBtn) openDodgerBtn.addEventListener('click', dodgerGame.open);
   }
 
   // =========================================================================

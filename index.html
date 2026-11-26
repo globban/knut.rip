@@ -18,10 +18,11 @@
   <!-- Main Minimal Terminal Layout -->
   <div class="relative z-10 min-h-[100dvh] flex flex-col max-w-[1600px] mx-auto px-2.5 sm:px-5 pt-2.5 sm:py-3 pb-24 lg:pb-3 gap-2.5 sm:gap-3">
 
-    <!-- COMPACT TOP BAR -->
-    <header class="glass rounded-2xl px-3 sm:px-4 py-2.5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5 lg:gap-3">
-      <div class="flex items-center justify-between lg:justify-start gap-2 sm:gap-4">
-        <div class="flex items-center gap-2.5 sm:gap-4 min-w-0">
+    <!-- COMPACT TOP BAR (2 LINES: STATS ON LINE 1, MINIGAMES + MAKE COIN ON LINE 2) -->
+    <header class="glass rounded-2xl px-3 sm:px-4 py-2.5 flex flex-col gap-2">
+      <!-- LINE 1: Brand, Speed, and Account Stats -->
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 lg:gap-3">
+        <div class="flex items-center justify-between lg:justify-start gap-2.5 sm:gap-4 min-w-0">
           <a href="#top" class="font-bitcount text-2xl sm:text-3xl font-bold tracking-tight text-white hover:opacity-85 transition-opacity shrink-0">
             knut.rip
           </a>
@@ -39,68 +40,69 @@
           </div>
         </div>
 
-        <!-- Mobile Action Buttons -->
-        <div class="lg:hidden flex items-center gap-1.5 shrink-0">
-          <button
-            id="openFlappyBtnMobile"
-            type="button"
-            class="px-2.5 py-1.5 rounded-xl bg-[#22c55e]/20 hover:bg-[#22c55e]/30 border border-[#22c55e]/45 text-[#22c55e] font-semibold text-[11px] tracking-wide transition cursor-pointer"
-          >
-            FLAPPY
-          </button>
-          <button
-            id="openMakeCoinBtnMobile"
-            type="button"
-            class="px-2.5 py-1.5 rounded-xl bg-white text-black hover:bg-white/85 font-semibold text-[11px] tracking-wide transition cursor-pointer"
-          >
-            + COIN
-          </button>
+        <!-- Account Stats -->
+        <div class="grid grid-cols-3 lg:flex lg:flex-wrap items-center gap-1.5 sm:gap-2.5 lg:gap-3 text-[11px] sm:text-sm">
+          <div class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-black/50 border border-white/10 flex flex-col lg:flex-row lg:items-center lg:gap-2 min-w-0">
+            <span class="text-[10px] lg:text-xs text-white/45">CASH</span>
+            <span id="cashDisplay" class="text-white font-semibold tabular-nums truncate">$25,000.00</span>
+          </div>
+
+          <div class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-black/50 border border-white/10 flex flex-col lg:flex-row lg:items-center lg:gap-2 min-w-0">
+            <span class="text-[10px] lg:text-xs text-white/45">NET WORTH</span>
+            <span id="portfolioDisplay" class="text-white font-semibold tabular-nums truncate">$25,000.00</span>
+          </div>
+
+          <div class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-black/50 border border-white/10 flex flex-col lg:flex-row lg:items-center lg:gap-2 min-w-0">
+            <span class="text-[10px] lg:text-xs text-white/45">PNL</span>
+            <span id="totalPnlDisplay" class="font-semibold tabular-nums text-white/80 truncate">$0.00 (0.00%)</span>
+          </div>
+
+          <span id="saveBadge" class="hidden md:inline-block lg:inline-block text-[11px] text-white/40 tracking-wider uppercase">
+            AUTOSAVED
+          </span>
         </div>
       </div>
 
-      <!-- Account Stats & Desktop Make Coin Trigger -->
-      <div class="grid grid-cols-3 lg:flex lg:flex-wrap items-center gap-1.5 sm:gap-2.5 lg:gap-3 text-[11px] sm:text-sm">
-        <div class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-black/50 border border-white/10 flex flex-col lg:flex-row lg:items-center lg:gap-2 min-w-0">
-          <span class="text-[10px] lg:text-xs text-white/45">CASH</span>
-          <span id="cashDisplay" class="text-white font-semibold tabular-nums truncate">$25,000.00</span>
+      <!-- LINE 2: Arcade Mini-Games + Make Coin -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/10">
+        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <button
+            id="openFlappyBtn"
+            type="button"
+            class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#22c55e]/15 hover:bg-[#22c55e]/25 border border-[#22c55e]/45 text-[#22c55e] font-semibold text-[11px] sm:text-xs tracking-wide transition cursor-pointer"
+          >
+            FLAPPY (+$250)
+          </button>
+          <button
+            id="openSnakeBtn"
+            type="button"
+            class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#22c55e]/15 hover:bg-[#22c55e]/25 border border-[#22c55e]/45 text-[#22c55e] font-semibold text-[11px] sm:text-xs tracking-wide transition cursor-pointer"
+          >
+            SNAKE (+$200)
+          </button>
+          <button
+            id="openDodgerBtn"
+            type="button"
+            class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#22c55e]/15 hover:bg-[#22c55e]/25 border border-[#22c55e]/45 text-[#22c55e] font-semibold text-[11px] sm:text-xs tracking-wide transition cursor-pointer"
+          >
+            DODGER (+$150)
+          </button>
         </div>
-
-        <div class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-black/50 border border-white/10 flex flex-col lg:flex-row lg:items-center lg:gap-2 min-w-0">
-          <span class="text-[10px] lg:text-xs text-white/45">NET WORTH</span>
-          <span id="portfolioDisplay" class="text-white font-semibold tabular-nums truncate">$25,000.00</span>
-        </div>
-
-        <div class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-black/50 border border-white/10 flex flex-col lg:flex-row lg:items-center lg:gap-2 min-w-0">
-          <span class="text-[10px] lg:text-xs text-white/45">PNL</span>
-          <span id="totalPnlDisplay" class="font-semibold tabular-nums text-white/80 truncate">$0.00 (0.00%)</span>
-        </div>
-
-        <span id="saveBadge" class="hidden md:inline-block lg:inline-block text-[11px] text-white/40 tracking-wider uppercase">
-          AUTOSAVED
-        </span>
-
-        <button
-          id="openFlappyBtn"
-          type="button"
-          class="hidden lg:inline-block px-3 py-1.5 rounded-xl bg-[#22c55e]/15 hover:bg-[#22c55e]/25 border border-[#22c55e]/45 text-[#22c55e] font-semibold text-xs sm:text-sm tracking-wide transition cursor-pointer"
-        >
-          FLAPPY (+$250)
-        </button>
 
         <button
           id="openMakeCoinBtn"
           type="button"
-          class="hidden lg:inline-block px-3.5 py-1.5 rounded-xl bg-white text-black hover:bg-white/85 font-semibold text-xs sm:text-sm tracking-wide transition cursor-pointer"
+          class="px-3 sm:px-3.5 py-1.5 rounded-xl bg-white text-black hover:bg-white/85 font-semibold text-[11px] sm:text-xs tracking-wide transition cursor-pointer shrink-0"
         >
           + MAKE COIN
         </button>
       </div>
     </header>
 
-    <!-- STATUS BANNER / TOAST (Inline non-blocking feedback) -->
-    <div id="statusBar" class="hidden glass rounded-xl px-4 py-2 text-xs sm:text-sm flex items-center justify-between border border-white/20">
-      <span id="statusText" class="text-white"></span>
-      <button id="dismissStatusBtn" type="button" class="text-white/50 hover:text-white ml-4 cursor-pointer">✕</button>
+    <!-- STATUS BANNER / TOAST (Floating overlay — never shifts layout) -->
+    <div id="statusBar" class="hidden fixed top-3 sm:top-4 left-1/2 -translate-x-1/2 z-50 w-[min(560px,calc(100vw-1.5rem))] glass bg-black/90 rounded-xl px-4 py-2.5 text-xs sm:text-sm flex items-center justify-between border border-white/25 shadow-[0_12px_36px_rgba(0,0,0,0.85)]">
+      <span id="statusText" class="text-white truncate"></span>
+      <button id="dismissStatusBtn" type="button" class="text-white/50 hover:text-white ml-4 shrink-0 cursor-pointer">✕</button>
     </div>
 
     <!-- MAIN 3-COLUMN TRADING WORKSPACE -->
@@ -602,7 +604,58 @@
     </div>
   </div>
 
+  <!-- SNAKE KNUT MINIGAME MODAL -->
+  <div id="snakeModal" class="fixed inset-0 z-50 hidden items-center justify-center p-2.5 sm:p-4 bg-black/85 backdrop-blur-md">
+    <div class="glass rounded-2xl w-full max-w-[360px] max-h-[96dvh] p-3 sm:p-4 border border-white/20 flex flex-col gap-2.5">
+      <div class="flex items-center justify-between gap-2 border-b border-white/10 pb-2">
+        <div class="min-w-0">
+          <div class="text-sm sm:text-base font-bold text-white tracking-wide">SNAKE KNUT</div>
+          <div class="text-[10px] text-[#22c55e] tabular-nums">+$200 PER COIN • SESSION: <span id="snakeSessionEarned">+$0</span></div>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button id="snakeMuteBtn" type="button" class="px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-[11px] text-white cursor-pointer">SFX ON</button>
+          <button id="closeSnakeBtn" type="button" class="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-xs cursor-pointer">✕</button>
+        </div>
+      </div>
+      <div class="w-full flex items-center justify-center bg-black rounded-xl border border-white/15 overflow-hidden">
+        <canvas
+          id="snakeCanvas"
+          width="288"
+          height="512"
+          class="block w-full max-h-[74dvh] aspect-[288/512] cursor-pointer"
+          style="image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none;"
+        ></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANDLE DODGER MINIGAME MODAL -->
+  <div id="dodgerModal" class="fixed inset-0 z-50 hidden items-center justify-center p-2.5 sm:p-4 bg-black/85 backdrop-blur-md">
+    <div class="glass rounded-2xl w-full max-w-[360px] max-h-[96dvh] p-3 sm:p-4 border border-white/20 flex flex-col gap-2.5">
+      <div class="flex items-center justify-between gap-2 border-b border-white/10 pb-2">
+        <div class="min-w-0">
+          <div class="text-sm sm:text-base font-bold text-white tracking-wide">CANDLE DODGER</div>
+          <div class="text-[10px] text-[#22c55e] tabular-nums">+$150 PER GREEN • SESSION: <span id="dodgerSessionEarned">+$0</span></div>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button id="dodgerMuteBtn" type="button" class="px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-[11px] text-white cursor-pointer">SFX ON</button>
+          <button id="closeDodgerBtn" type="button" class="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-xs cursor-pointer">✕</button>
+        </div>
+      </div>
+      <div class="w-full flex items-center justify-center bg-black rounded-xl border border-white/15 overflow-hidden">
+        <canvas
+          id="dodgerCanvas"
+          width="288"
+          height="512"
+          class="block w-full max-h-[74dvh] aspect-[288/512] cursor-pointer"
+          style="image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none;"
+        ></canvas>
+      </div>
+    </div>
+  </div>
+
   <script src="flappy.js"></script>
+  <script src="minigames.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
