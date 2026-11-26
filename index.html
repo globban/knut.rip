@@ -39,14 +39,23 @@
           </div>
         </div>
 
-        <!-- Mobile Make Coin Button -->
-        <button
-          id="openMakeCoinBtnMobile"
-          type="button"
-          class="lg:hidden px-2.5 py-1.5 rounded-xl bg-white text-black hover:bg-white/85 font-semibold text-[11px] tracking-wide transition cursor-pointer shrink-0"
-        >
-          + COIN
-        </button>
+        <!-- Mobile Action Buttons -->
+        <div class="lg:hidden flex items-center gap-1.5 shrink-0">
+          <button
+            id="openFlappyBtnMobile"
+            type="button"
+            class="px-2.5 py-1.5 rounded-xl bg-[#22c55e]/20 hover:bg-[#22c55e]/30 border border-[#22c55e]/45 text-[#22c55e] font-semibold text-[11px] tracking-wide transition cursor-pointer"
+          >
+            FLAPPY
+          </button>
+          <button
+            id="openMakeCoinBtnMobile"
+            type="button"
+            class="px-2.5 py-1.5 rounded-xl bg-white text-black hover:bg-white/85 font-semibold text-[11px] tracking-wide transition cursor-pointer"
+          >
+            + COIN
+          </button>
+        </div>
       </div>
 
       <!-- Account Stats & Desktop Make Coin Trigger -->
@@ -69,6 +78,14 @@
         <span id="saveBadge" class="hidden md:inline-block lg:inline-block text-[11px] text-white/40 tracking-wider uppercase">
           AUTOSAVED
         </span>
+
+        <button
+          id="openFlappyBtn"
+          type="button"
+          class="hidden lg:inline-block px-3 py-1.5 rounded-xl bg-[#22c55e]/15 hover:bg-[#22c55e]/25 border border-[#22c55e]/45 text-[#22c55e] font-semibold text-xs sm:text-sm tracking-wide transition cursor-pointer"
+        >
+          FLAPPY (+$250)
+        </button>
 
         <button
           id="openMakeCoinBtn"
@@ -541,16 +558,51 @@
         </div>
       </div>
 
-      <button
-        id="restartGameBtn"
-        type="button"
-        class="w-full py-3 rounded-xl bg-white hover:bg-white/85 text-black font-bold text-sm tracking-wide transition cursor-pointer"
-      >
-        RESTART ($25,000.00)
-      </button>
+      <div class="space-y-2">
+        <button
+          id="openFlappyFromGameOverBtn"
+          type="button"
+          class="w-full py-2.5 rounded-xl bg-[#22c55e]/20 hover:bg-[#22c55e]/30 border border-[#22c55e]/50 text-[#22c55e] font-bold text-xs sm:text-sm tracking-wide transition cursor-pointer"
+        >
+          PLAY FLAPPY (+$250 / PT)
+        </button>
+        <button
+          id="restartGameBtn"
+          type="button"
+          class="w-full py-3 rounded-xl bg-white hover:bg-white/85 text-black font-bold text-sm tracking-wide transition cursor-pointer"
+        >
+          RESTART ($25,000.00)
+        </button>
+      </div>
     </div>
   </div>
 
+  <!-- FLAPPY CANDLESTICK MINIGAME MODAL -->
+  <div id="flappyModal" class="fixed inset-0 z-50 hidden items-center justify-center p-2.5 sm:p-4 bg-black/85 backdrop-blur-md">
+    <div class="glass rounded-2xl w-full max-w-[360px] max-h-[96dvh] p-3 sm:p-4 border border-white/20 flex flex-col gap-2.5">
+      <div class="flex items-center justify-between gap-2 border-b border-white/10 pb-2">
+        <div class="min-w-0">
+          <div class="text-sm sm:text-base font-bold text-white tracking-wide">FLAPPY KNUT</div>
+          <div class="text-[10px] text-[#22c55e] tabular-nums">+$250 PER POINT • SESSION: <span id="flappySessionEarned">+$0</span></div>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button id="flappyMuteBtn" type="button" class="px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-[11px] text-white cursor-pointer">SFX ON</button>
+          <button id="closeFlappyBtn" type="button" class="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-xs cursor-pointer">✕</button>
+        </div>
+      </div>
+      <div class="w-full flex items-center justify-center bg-black rounded-xl border border-white/15 overflow-hidden">
+        <canvas
+          id="flappyCanvas"
+          width="288"
+          height="512"
+          class="block w-full max-h-[74dvh] aspect-[288/512] cursor-pointer"
+          style="image-rendering: pixelated; image-rendering: crisp-edges; touch-action: manipulation;"
+        ></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script src="flappy.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

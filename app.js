@@ -2019,6 +2019,52 @@
   });
 
   // =========================================================================
+  // 9B. FLAPPY CANDLESTICK MINIGAME ($250 PER POINT)
+  // =========================================================================
+  if (window.KnutFlappy) {
+    const flappyGame = window.KnutFlappy.init({
+      onPoint(reward) {
+        state.cash += reward;
+        if (state.gameOver && state.cash > 0) {
+          state.gameOver = false;
+          state.gameOverDismissed = false;
+          const goModal = document.getElementById('gameOverModal');
+          if (goModal) {
+            goModal.classList.add('hidden');
+            goModal.classList.remove('flex');
+          }
+        }
+        updateHeaderStats();
+        renderOrderTicket();
+        saveProgress();
+      },
+      onRoundEnd(points, earned) {
+        addLog(`FLAPPY MINIGAME: +${formatPrice(earned)} (${points} PT${points === 1 ? '' : 'S'})`, 'buy');
+        notifyStatus(`FLAPPY PAYOUT: +${formatPrice(earned)} (${points} PTS)`);
+        saveProgress();
+      }
+    });
+
+    if (flappyGame) {
+      const openFlappyBtn = document.getElementById('openFlappyBtn');
+      const openFlappyBtnMobile = document.getElementById('openFlappyBtnMobile');
+      const openFlappyFromGameOverBtn = document.getElementById('openFlappyFromGameOverBtn');
+      if (openFlappyBtn) openFlappyBtn.addEventListener('click', flappyGame.open);
+      if (openFlappyBtnMobile) openFlappyBtnMobile.addEventListener('click', flappyGame.open);
+      if (openFlappyFromGameOverBtn) {
+        openFlappyFromGameOverBtn.addEventListener('click', () => {
+          const goModal = document.getElementById('gameOverModal');
+          if (goModal) {
+            goModal.classList.add('hidden');
+            goModal.classList.remove('flex');
+          }
+          flappyGame.open();
+        });
+      }
+    }
+  }
+
+  // =========================================================================
   // 10. INITIAL BOOT
   // =========================================================================
   loadProgress();
