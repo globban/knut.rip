@@ -79,3 +79,50 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* Mobile UX & Safe-Area Polish */
+.mobile-safe-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+#candleCanvas {
+  touch-action: pan-y;
+}
+
+@media (max-width: 1023px) {
+  body[data-mobile-tab="trade"] [data-mobile-panel="markets"],
+  body[data-mobile-tab="trade"] [data-mobile-panel="positions"],
+  body[data-mobile-tab="trade"] [data-mobile-panel="log"] {
+    display: none;
+  }
+
+  body[data-mobile-tab="markets"] [data-mobile-panel="center"],
+  body[data-mobile-tab="markets"] [data-mobile-panel="right"] {
+    display: none;
+  }
+
+  body[data-mobile-tab="positions"] [data-mobile-panel="markets"],
+  body[data-mobile-tab="positions"] [data-mobile-panel="right"],
+  body[data-mobile-tab="positions"] [data-mobile-panel="trade"] {
+    display: none;
+  }
+
+  body[data-mobile-tab="log"] [data-mobile-panel="markets"],
+  body[data-mobile-tab="log"] [data-mobile-panel="center"],
+  body[data-mobile-tab="log"] [data-mobile-panel="trade"] {
+    display: none;
+  }
+
+  /* Prevent iOS Safari zoom on form focus */
+  input[type="text"],
+  input[type="number"],
+  select {
+    font-size: 16px;
+  }
+
+  /* Larger touch thumb for leverage range slider */
+  input[type="range"]::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+  }
+}

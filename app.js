@@ -903,6 +903,31 @@
 
   setInterval(saveProgress, 6000);
 
+  function setMobileTab(tab) {
+    const valid = ['trade', 'markets', 'positions', 'log'].includes(tab) ? tab : 'trade';
+    document.body.dataset.mobileTab = valid;
+    document.querySelectorAll('.mobile-tab-btn').forEach((btn) => {
+      const active = btn.getAttribute('data-mobile-tab') === valid;
+      btn.className = active
+        ? 'mobile-tab-btn py-2.5 rounded-xl bg-white text-black transition cursor-pointer flex items-center justify-center gap-1'
+        : 'mobile-tab-btn py-2.5 rounded-xl text-white/65 hover:text-white transition cursor-pointer flex items-center justify-center gap-1';
+    });
+    if (valid === 'trade') {
+      requestAnimationFrame(() => drawCandleChart(0.016));
+    }
+  }
+
+  document.querySelectorAll('.mobile-tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setMobileTab(btn.getAttribute('data-mobile-tab'));
+    });
+  });
+
+  const mobileSwitchAssetBtn = document.getElementById('mobileSwitchAssetBtn');
+  if (mobileSwitchAssetBtn) {
+    mobileSwitchAssetBtn.addEventListener('click', () => setMobileTab('markets'));
+  }
+
   function selectAsset(ticker) {
     if (!ticker || !state.assets[ticker]) return;
     state.selectedTicker = ticker;
@@ -914,6 +939,10 @@
     renderPositions();
     renderOrderTicket();
     drawCandleChart(0.016);
+    if (window.innerWidth < 1024) {
+      setMobileTab('trade');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   // =========================================================================
@@ -1180,7 +1209,7 @@
     const minP = state.scaleMin;
     const maxP = Math.max(minP + 1e-9, state.scaleMax);
 
-    const rightMargin = 82;
+    const rightMargin = w < 460 ? 64 : 82;
     const topMargin = 14;
     const bottomMargin = 20;
     const plotW = Math.max(40, w - rightMargin);
@@ -1189,7 +1218,7 @@
     const priceToY = (p) => topMargin + (1 - (p - minP) / (maxP - minP)) * plotH;
 
     // Horizontal grid lines & price labels
-    candleCtx.font = '11px "Bitcount Single", system-ui';
+    candleCtx.font = w < 460 ? '10px "Bitcount Single", system-ui' : '11px "Bitcount Single", system-ui';
     candleCtx.textAlign = 'left';
     candleCtx.textBaseline = 'middle';
 
@@ -1333,22 +1362,48 @@
     }
   }
 
-  candleCanvas.addEventListener('mousemove', (e) => {
+  function updateChartHover(clientX) {
     const asset = state.assets[state.selectedTicker];
     if (!asset) return;
     const rect = candleCanvas.getBoundingClientRect();
-    const rightMargin = 82;
+    const rightMargin = rect.width < 460 ? 64 : 82;
     const plotW = Math.max(40, rect.width - rightMargin);
-    const x = e.clientX - rect.left;
+    const x = clientX - rect.left;
     const slice = getVisibleSlice(asset);
     if (x >= 0 && x <= plotW && slice.length > 0) {
       const idx = Math.min(slice.length - 1, Math.max(0, Math.floor((x / plotW) * slice.length)));
       state.hoverCandleIndex = idx;
       drawCandleChart();
     }
+  }
+
+  candleCanvas.addEventListener('mousemove', (e) => {
+    updateChartHover(e.clientX);
   });
 
   candleCanvas.addEventListener('mouseleave', () => {
+    state.hoverCandleIndex = null;
+    drawCandleChart();
+  });
+
+  candleCanvas.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches.length > 0) {
+      updateChartHover(e.touches[0].clientX);
+    }
+  }, { passive: true });
+
+  candleCanvas.addEventListener('touchmove', (e) => {
+    if (e.touches && e.touches.length > 0) {
+      updateChartHover(e.touches[0].clientX);
+    }
+  }, { passive: true });
+
+  candleCanvas.addEventListener('touchend', () => {
+    state.hoverCandleIndex = null;
+    drawCandleChart();
+  });
+
+  candleCanvas.addEventListener('touchcancel', () => {
     state.hoverCandleIndex = null;
     drawCandleChart();
   });
@@ -1619,8 +1674,18 @@
 
   function renderPositions() {
     const container = document.getElementById('positionsContainer');
+    const mobileBadge = document.getElementById('mobilePosBadge');
     const entries = Object.entries(state.positions).filter(([, p]) => p && p.qty > 1e-8);
     document.getElementById('positionsCount').textContent = `${entries.length} ASSET${entries.length === 1 ? '' : 'S'}`;
+
+    if (mobileBadge) {
+      if (entries.length > 0) {
+        mobileBadge.textContent = String(entries.length);
+        mobileBadge.classList.remove('hidden');
+      } else {
+        mobileBadge.classList.add('hidden');
+      }
+    }
 
     if (entries.length === 0) {
       closeAllPositionsBtn.classList.add('hidden');
@@ -1630,8 +1695,66 @@
 
     closeAllPositionsBtn.classList.remove('hidden');
 
+    const rowsHtml = entries
+      .map(([ticker, pos]) => {
+        const asset = state.assets[ticker];
+        if (!asset) return '';
+        const pnl = getUnrealizedPnl(pos, asset.price);
+        const pnlCls = pnl >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]';
+        const sideCls = pos.side === 'SHORT'
+          ? 'bg-[#ef4444]/20 text-[#ef4444]'
+          : 'bg-[#22c55e]/20 text-[#22c55e]';
+        return `
+          <tr data-select="${ticker}" class="pos-row hover:bg-white/[0.05] cursor-pointer">
+            <td class="py-2 pr-2 font-bold text-white">
+              ${ticker}
+              ${pos.leverage > 1 ? `<span class="ml-1 text-[10px] px-1 py-0.5 rounded bg-white/10 text-white/85">${pos.leverage}x</span>` : ''}
+            </td>
+            <td class="py-2 px-2">
+              <span class="text-[10px] px-1.5 py-0.5 rounded font-bold ${sideCls}">${pos.side}</span>
+            </td>
+            <td class="py-2 px-2 text-white/85">${formatQty(pos.qty)}</td>
+            <td class="py-2 px-2 text-white/60">${formatPrice(pos.avgPrice)}</td>
+            <td class="py-2 px-2 text-[#ef4444]">${pos.liqPrice > 0 ? formatPrice(pos.liqPrice) : '-'}</td>
+            <td class="py-2 px-2 text-white">${formatPrice(asset.price)}</td>
+            <td class="py-2 pl-2 text-right font-semibold ${pnlCls}">${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}</td>
+          </tr>
+        `;
+      })
+      .join('');
+
+    const mobileCardsHtml = entries
+      .map(([ticker, pos]) => {
+        const asset = state.assets[ticker];
+        if (!asset) return '';
+        const pnl = getUnrealizedPnl(pos, asset.price);
+        const pnlCls = pnl >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]';
+        const sideCls = pos.side === 'SHORT'
+          ? 'bg-[#ef4444]/20 text-[#ef4444]'
+          : 'bg-[#22c55e]/20 text-[#22c55e]';
+        return `
+          <div data-select="${ticker}" class="pos-row rounded-xl bg-black/55 border border-white/10 p-3 space-y-2 cursor-pointer active:bg-white/[0.08] tabular-nums">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5">
+                <span class="font-bold text-white text-sm">${ticker}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded font-bold ${sideCls}">${pos.side}</span>
+                ${pos.leverage > 1 ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/85">${pos.leverage}x</span>` : ''}
+              </div>
+              <span class="font-bold text-sm ${pnlCls}">${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-[11px]">
+              <div><div class="text-white/40 text-[10px]">ENTRY</div><div class="text-white/85">${formatPrice(pos.avgPrice)}</div></div>
+              <div><div class="text-white/40 text-[10px]">MARK</div><div class="text-white">${formatPrice(asset.price)}</div></div>
+              <div><div class="text-white/40 text-[10px]">LIQ.</div><div class="text-[#ef4444]">${pos.liqPrice > 0 ? formatPrice(pos.liqPrice) : '-'}</div></div>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
     container.innerHTML = `
-      <table class="w-full text-left border-collapse text-xs tabular-nums">
+      <div class="sm:hidden space-y-2">${mobileCardsHtml}</div>
+      <table class="hidden sm:table w-full text-left border-collapse text-xs tabular-nums">
         <thead>
           <tr class="text-white/40 border-b border-white/10">
             <th class="py-1.5 pr-2 font-normal">TICKER</th>
@@ -1644,40 +1767,14 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-white/[0.06]">
-          ${entries
-            .map(([ticker, pos]) => {
-              const asset = state.assets[ticker];
-              if (!asset) return '';
-              const pnl = getUnrealizedPnl(pos, asset.price);
-              const pnlCls = pnl >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]';
-              const sideCls = pos.side === 'SHORT'
-                ? 'bg-[#ef4444]/20 text-[#ef4444]'
-                : 'bg-[#22c55e]/20 text-[#22c55e]';
-              return `
-                <tr data-select="${ticker}" class="pos-row hover:bg-white/[0.05] cursor-pointer">
-                  <td class="py-2 pr-2 font-bold text-white">
-                    ${ticker}
-                    ${pos.leverage > 1 ? `<span class="ml-1 text-[10px] px-1 py-0.5 rounded bg-white/10 text-white/85">${pos.leverage}x</span>` : ''}
-                  </td>
-                  <td class="py-2 px-2">
-                    <span class="text-[10px] px-1.5 py-0.5 rounded font-bold ${sideCls}">${pos.side}</span>
-                  </td>
-                  <td class="py-2 px-2 text-white/85">${formatQty(pos.qty)}</td>
-                  <td class="py-2 px-2 text-white/60">${formatPrice(pos.avgPrice)}</td>
-                  <td class="py-2 px-2 text-[#ef4444]">${pos.liqPrice > 0 ? formatPrice(pos.liqPrice) : '-'}</td>
-                  <td class="py-2 px-2 text-white">${formatPrice(asset.price)}</td>
-                  <td class="py-2 pl-2 text-right font-semibold ${pnlCls}">${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}</td>
-                </tr>
-              `;
-            })
-            .join('')}
+          ${rowsHtml}
         </tbody>
       </table>
     `;
 
-    container.querySelectorAll('.pos-row').forEach((tr) => {
-      tr.addEventListener('click', () => {
-        selectAsset(tr.getAttribute('data-select'));
+    container.querySelectorAll('.pos-row').forEach((el) => {
+      el.addEventListener('click', () => {
+        selectAsset(el.getAttribute('data-select'));
       });
     });
   }
@@ -1723,7 +1820,9 @@
     makeCoinModal.classList.remove('flex');
   }
 
+  const openMakeCoinBtnMobile = document.getElementById('openMakeCoinBtnMobile');
   openMakeCoinBtn.addEventListener('click', openModal);
+  if (openMakeCoinBtnMobile) openMakeCoinBtnMobile.addEventListener('click', openModal);
   closeMakeCoinBtn.addEventListener('click', closeModal);
   cancelMakeCoinBtn.addEventListener('click', closeModal);
   makeCoinModal.addEventListener('click', (e) => {
@@ -1923,6 +2022,7 @@
   // 10. INITIAL BOOT
   // =========================================================================
   loadProgress();
+  setMobileTab('trade');
   syncSpeedButtons();
   syncLeverageControls();
   setSide('LONG');
