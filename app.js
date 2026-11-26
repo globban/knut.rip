@@ -145,21 +145,42 @@
 
   function generateHistory(basePrice, vol, count = 115) {
     const candles = [];
-    let curr = basePrice * (0.9 + Math.random() * 0.2);
+    let curr = 1.0;
+    let momentum = (Math.random() - 0.5) * vol * 0.4;
+    let regimeLeft = 6 + Math.floor(Math.random() * 10);
+
     for (let i = 0; i < count; i++) {
+      regimeLeft -= 1;
+      if (regimeLeft <= 0) {
+        regimeLeft = 6 + Math.floor(Math.random() * 12);
+        const roll = Math.random();
+        if (roll < 0.30) momentum = vol * (0.25 + Math.random() * 0.45);
+        else if (roll < 0.60) momentum = -vol * (0.25 + Math.random() * 0.45);
+        else momentum = (Math.random() - 0.5) * vol * 0.2;
+      }
+
       const open = curr;
-      const drift = (Math.random() - 0.485) * vol;
-      const close = Math.max(0.0000001, open * (1 + drift));
-      const wickUp = Math.random() * vol * 0.7;
-      const wickDown = Math.random() * vol * 0.7;
+      const noise = (Math.random() - 0.5) * 2 * vol * 0.55;
+      const step = momentum * 0.35 + noise;
+      const close = Math.max(0.0001, open * (1 + step));
+      const wickUp = Math.random() * vol * 0.45;
+      const wickDown = Math.random() * vol * 0.45;
       const high = Math.max(open, close) * (1 + wickUp);
-      const low = Math.max(0.0000001, Math.min(open, close) * (1 - wickDown));
+      const low = Math.max(0.0001, Math.min(open, close) * (1 - wickDown));
       candles.push({ open, high, low, close });
       curr = close;
+      momentum *= 0.92;
+    }
+
+    // Uniformly rescale the whole series so the last candle naturally ends at basePrice (no jump)
+    const scale = basePrice / Math.max(1e-9, curr);
+    for (let i = 0; i < candles.length; i++) {
+      candles[i].open = Math.max(0.0000001, candles[i].open * scale);
+      candles[i].high = Math.max(0.0000001, candles[i].high * scale);
+      candles[i].low = Math.max(0.0000001, candles[i].low * scale);
+      candles[i].close = Math.max(0.0000001, candles[i].close * scale);
     }
     candles[candles.length - 1].close = basePrice;
-    candles[candles.length - 1].high = Math.max(candles[candles.length - 1].open, basePrice) * 1.003;
-    candles[candles.length - 1].low = Math.min(candles[candles.length - 1].open, basePrice) * 0.997;
     return candles;
   }
 
@@ -345,10 +366,13 @@
       for (const [ticker, sAsset] of Object.entries(saved.assets)) {
         if (!sAsset || !Array.isArray(sAsset.candles) || sAsset.candles.length === 0) continue;
         const base = state.assets[ticker] || {};
+        const lastClose = sAsset.candles[sAsset.candles.length - 1]?.close;
+        const stablePrice = typeof lastClose === 'number' && lastClose > 0 ? lastClose : sAsset.price;
         state.assets[ticker] = {
           ...base,
           ...sAsset,
-          targetPrice: typeof sAsset.targetPrice === 'number' && sAsset.targetPrice > 0 ? sAsset.targetPrice : sAsset.price,
+          price: stablePrice,
+          targetPrice: stablePrice,
           adRemainingSec: typeof sAsset.adRemainingSec === 'number' ? sAsset.adRemainingSec : 0,
           adCampaignName: sAsset.adCampaignName || '',
           tradeBias: null
@@ -583,21 +607,145 @@
     });
   });
 
-  // Sets an inconspicuous 20-second drift toward a 1% - 10% move
-  // (70% in your favor, 30% against) without sudden jumps or high-frequency noise.
+  // Builds a realistic multi-candle post-entry price trajectory:
+  // 50/50 up/down, 1%-10% net move over 25-40 seconds (at 1x speed),
+  // using varied market patterns + per-candle zigzag so candles naturally mix red & green.
+  function buildTradePatternKeyframes(pattern) {
+    const r = (min, max) => min + Math.random() * (max - min);
+    switch (pattern) {
+      case 'fakeout_reversal':
+        // Moves against final direction first (~0.45-0.65x), then reverses double that to target
+        return [
+          { t: 0.0, v: 0.0 },
+          { t: r(0.14, 0.22), v: -r(0.28, 0.45) },
+          { t: r(0.26, 0.34), v: -r(0.45, 0.65) },
+          { t: r(0.42, 0.50), v: -r(0.05, 0.18) },
+          { t: r(0.56, 0.64), v: r(0.32, 0.48) },
+          { t: r(0.70, 0.78), v: r(0.16, 0.30) },
+          { t: r(0.86, 0.92), v: r(0.82, 0.96) },
+          { t: 1.0, v: 1.0 }
+        ];
+      case 'jagged_grind': {
+        // Subtle slow stair-step with realistic alternating pullbacks
+        const legs = 4 + Math.floor(Math.random() * 2); // 4-5 waves
+        const pts = [{ t: 0.0, v: 0.0 }];
+        for (let i = 1; i <= legs; i++) {
+          const baseT = i / legs;
+          const peakT = Math.max(pts[pts.length - 1].t + 0.05, baseT - r(0.06, 0.10));
+          const peakV = Math.min(1.08, (i / legs) + r(0.06, 0.16));
+          pts.push({ t: peakT, v: peakV });
+          if (i < legs) {
+            const dipV = peakV - r(0.16, 0.28);
+            pts.push({ t: baseT, v: dipV });
+          }
+        }
+        pts.push({ t: 1.0, v: 1.0 });
+        return pts;
+      }
+      case 'shakeout_dip':
+        // Initial dip (stop-hunt) against the move, brief base, then steady climb to target
+        return [
+          { t: 0.0, v: 0.0 },
+          { t: r(0.14, 0.22), v: -r(0.30, 0.52) },
+          { t: r(0.28, 0.36), v: -r(0.14, 0.28) },
+          { t: r(0.44, 0.52), v: r(0.18, 0.34) },
+          { t: r(0.58, 0.66), v: r(0.05, 0.18) },
+          { t: r(0.76, 0.84), v: r(0.74, 0.88) },
+          { t: r(0.88, 0.93), v: r(0.62, 0.76) },
+          { t: 1.0, v: 1.0 }
+        ];
+      case 'consolidation_breakout':
+        // Sideways chop around entry, breakout, retest, then continuation
+        return [
+          { t: 0.0, v: 0.0 },
+          { t: r(0.10, 0.15), v: r(0.10, 0.20) },
+          { t: r(0.20, 0.26), v: -r(0.12, 0.22) },
+          { t: r(0.32, 0.38), v: r(0.06, 0.16) },
+          { t: r(0.42, 0.48), v: -r(0.08, 0.16) },
+          { t: r(0.64, 0.72), v: r(0.78, 0.94) },
+          { t: r(0.78, 0.84), v: r(0.52, 0.68) },
+          { t: 1.0, v: 1.0 }
+        ];
+      case 'staircase_flag':
+        // Impulse leg -> tight counter-trend flag -> second leg breakout
+        return [
+          { t: 0.0, v: 0.0 },
+          { t: r(0.18, 0.26), v: r(0.52, 0.68) },
+          { t: r(0.32, 0.38), v: r(0.34, 0.46) },
+          { t: r(0.44, 0.50), v: r(0.46, 0.58) },
+          { t: r(0.56, 0.62), v: r(0.30, 0.42) },
+          { t: r(0.80, 0.88), v: r(0.96, 1.10) },
+          { t: r(0.91, 0.95), v: r(0.86, 0.94) },
+          { t: 1.0, v: 1.0 }
+        ];
+      case 'overshoot_retrace':
+        // Fast surge past target, sharp cool-off pullback, settle near target
+        return [
+          { t: 0.0, v: 0.0 },
+          { t: r(0.12, 0.18), v: -r(0.08, 0.18) },
+          { t: r(0.34, 0.44), v: r(1.18, 1.42) },
+          { t: r(0.52, 0.60), v: r(0.74, 0.90) },
+          { t: r(0.68, 0.76), v: r(1.06, 1.20) },
+          { t: r(0.82, 0.89), v: r(0.82, 0.92) },
+          { t: 1.0, v: 1.0 }
+        ];
+      case 'double_test':
+      default:
+        // W-bottom / M-top double test before breaking out to target
+        return [
+          { t: 0.0, v: 0.0 },
+          { t: r(0.16, 0.22), v: -r(0.28, 0.42) },
+          { t: r(0.32, 0.38), v: r(0.16, 0.30) },
+          { t: r(0.48, 0.56), v: -r(0.20, 0.34) },
+          { t: r(0.72, 0.80), v: r(0.76, 0.90) },
+          { t: r(0.85, 0.90), v: r(0.60, 0.74) },
+          { t: 1.0, v: 1.0 }
+        ];
+    }
+  }
+
+  function sampleKeyframes(keyframes, u) {
+    if (u <= 0) return keyframes[0].v;
+    if (u >= 1) return keyframes[keyframes.length - 1].v;
+    for (let i = 0; i < keyframes.length - 1; i++) {
+      const a = keyframes[i];
+      const b = keyframes[i + 1];
+      if (u >= a.t && u <= b.t) {
+        const span = Math.max(1e-6, b.t - a.t);
+        const local = (u - a.t) / span;
+        const smooth = local * local * (3 - 2 * local);
+        return a.v + (b.v - a.v) * smooth;
+      }
+    }
+    return keyframes[keyframes.length - 1].v;
+  }
+
   function startPostTradeWave(asset, tradeSide) {
-    const inFavour = Math.random() < 0.40;
+    const patterns = [
+      'fakeout_reversal',
+      'jagged_grind',
+      'shakeout_dip',
+      'consolidation_breakout',
+      'staircase_flag',
+      'overshoot_retrace',
+      'double_test'
+    ];
+    const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+    const dir = Math.random() < 0.5 ? 1 : -1; // 50/50 up or down
     const magnitude = 0.01 + Math.random() * 0.09; // 1% to 10%
-    const dir =
-      tradeSide === 'LONG'
-        ? (inFavour ? 1 : -1)
-        : (inFavour ? -1 : 1);
+    const duration = 25 + Math.random() * 15; // 25 to 40 seconds at 1x speed
 
     asset.tradeBias = {
+      pattern,
+      dir,
+      magnitude,
       elapsed: 0,
-      duration: 20.0, // 20 seconds at 1x speed
+      duration,
       startPrice: asset.price,
-      finalPrice: Math.max(0.0000001, asset.price * (1 + dir * magnitude))
+      keyframes: buildTradePatternKeyframes(pattern),
+      jitterTimer: 0,
+      jitterCurr: 0,
+      jitterNext: 0
     };
   }
 
@@ -688,17 +836,31 @@
       stepMarketWave();
     }
 
-    // Smooth price interpolation with subtle 20s post-trade drift blended into targetPrice
+    // Smooth price interpolation with patterned 25-40s post-trade wave blended organically
     const lerpFactor = 1 - Math.exp(-simDt * 4.5);
+    const biasBlend = 1 - Math.exp(-simDt * 2.2);
     for (const asset of Object.values(state.assets)) {
       if (asset.tradeBias && !asset.rugged) {
         const b = asset.tradeBias;
         b.elapsed = Math.min(b.duration, b.elapsed + simDt);
         const u = b.elapsed / b.duration;
-        // Smooth ease-in-out progress from startPrice to finalPrice over 20s
-        const eased = u * u * (3 - 2 * u);
-        const driftTarget = b.startPrice + (b.finalPrice - b.startPrice) * eased;
-        asset.targetPrice = asset.targetPrice * 0.85 + driftTarget * 0.15;
+
+        // Per-candle micro-zigzag so individual candles alternate red & green naturally
+        b.jitterTimer -= simDt;
+        if (b.jitterTimer <= 0) {
+          b.jitterTimer = 1.1 + Math.random() * 1.3;
+          // Alternate sign frequently around the pattern curve, tapering near endpoints
+          const envelope = Math.sin(Math.PI * Math.min(1, Math.max(0, u)));
+          const jitterAmp = Math.max(0.0025, b.magnitude * 0.22) * envelope;
+          const flip = b.jitterNext === 0 ? (Math.random() < 0.5 ? 1 : -1) : -Math.sign(b.jitterNext);
+          b.jitterNext = flip * jitterAmp * (0.45 + Math.random() * 0.75);
+        }
+        b.jitterCurr += (b.jitterNext - b.jitterCurr) * (1 - Math.exp(-simDt * 3.0));
+
+        const patternVal = sampleKeyframes(b.keyframes, u);
+        const pctOffset = b.dir * b.magnitude * patternVal + b.jitterCurr;
+        const driftTarget = Math.max(0.0000001, b.startPrice * (1 + pctOffset));
+        asset.targetPrice = asset.targetPrice + (driftTarget - asset.targetPrice) * biasBlend;
         if (b.elapsed >= b.duration) {
           asset.tradeBias = null;
         }
